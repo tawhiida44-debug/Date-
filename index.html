@@ -6,6 +6,8 @@
     <title> Book a Date with Tawhiida</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -35,7 +37,6 @@
     </style>
 </head>
 <body class="bg-pink-50 min-h-screen font-sans text-gray-900">
-    <!-- Header -->
     <header class="bg-gradient-to-r from-pink-600 to-pink-400 text-white py-6 px-4 shadow-lg">
         <div class="max-w-5xl mx-auto text-center">
             <h1 class="text-3xl font-bold"> Book a Date with Tawhiida</h1>
@@ -44,12 +45,10 @@
     </header>
 
     <main class="max-w-5xl mx-auto py-8 px-4">
-        <!-- Admin Access Button -->
         <div class="text-right mb-4">
             <button onclick="openAdminLogin()" class="text-pink-600 text-sm hover:underline"> Admin Login</button>
         </div>
 
-        <!-- Step Indicator -->
         <div class="flex justify-between mb-8 relative">
             <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-pink-200 -z-10"></div>
             <div id="step1-ind" class="w-10 h-10 rounded-full bg-pink-600 text-white flex items-center justify-center font-bold">1</div>
@@ -58,21 +57,15 @@
             <div id="step4-ind" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold">4</div>
         </div>
 
-        <!-- STEP 1: Nickname -->
         <section id="step1" class="block">
             <h2 class="text-2xl font-bold mb-6 text-center">Step 1: Who Are You? </h2>
             <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto">
                 <label class="block text-lg font-medium mb-3">Your Nickname</label>
-                <input type="text" id="nickname" placeholder="e.g. Sweetheart..." 
-                    class="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:outline-none focus:border-pink-500 mb-6 text-lg">
-                <button onclick="goStep2()" 
-                    class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-xl">
-                    Continue <i class="fa fa-arrow-right ml-2"></i>
-                </button>
+                <input type="text" id="nickname" placeholder="e.g. Sweetheart..." class="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:outline-none focus:border-pink-500 mb-6 text-lg">
+                <button onclick="goStep2()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-xl">Continue <i class="fa fa-arrow-right ml-2"></i></button>
             </div>
         </section>
 
-        <!-- STEP 2: Calendar -->
         <section id="step2" class="hidden">
             <h2 class="text-2xl font-bold mb-6 text-center">Step 2: Pick Your Date </h2>
             <p class="text-center text-gray-600 mb-6">Gray = Booked / Pink = Available</p>
@@ -105,7 +98,6 @@
             </div>
         </section>
 
-        <!-- STEP 3: Confirm & Pay -->
         <section id="step3" class="hidden">
             <h2 class="text-2xl font-bold mb-6 text-center">Step 3: Confirm & Pay  </h2>
             <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto">
@@ -121,8 +113,7 @@
                     <p class="text-center text-2xl font-bold text-pink-600 my-2">0706 308 117</p>
                     <p class="text-center text-sm text-gray-500 mb-4">Reference: Your Nickname</p>
                     <label class="block font-medium mb-2 mt-4">Your M-Pesa Number:</label>
-                    <input type="tel" id="senderMpesa" placeholder="e.g. 07XX XXX XXX" 
-                        class="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-pink-500 text-lg">
+                    <input type="tel" id="senderMpesa" placeholder="e.g. 07XX XXX XXX" class="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-pink-500 text-lg">
                 </div>
                 <div class="flex gap-4">
                     <button onclick="goStep2()" class="flex-1 bg-gray-200 py-3 rounded-xl font-bold">Back</button>
@@ -131,7 +122,6 @@
             </div>
         </section>
 
-        <!-- STEP 4: Success / Status -->
         <section id="step4" class="hidden">
             <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto text-center">
                 <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" id="statusIcon">
@@ -150,25 +140,39 @@
             </div>
         </section>
 
-        <!-- ADMIN PANEL (Hidden until login) -->
         <div id="adminPanel" class="admin-panel mt-8 bg-white rounded-2xl shadow-xl p-6">
             <h2 class="text-xl font-bold mb-4"> Admin — Manage Bookings</h2>
-            <div id="bookingList"></div>
+            <div id="bookingList"><p class="text-gray-500">Loading...</p></div>
             <button onclick="closeAdmin()" class="mt-4 bg-gray-500 text-white py-2 px-4 rounded-lg">Close Admin</button>
         </div>
     </main>
 
     <script>
+        // <-- PASTE YOUR CONFIG HERE
+        const firebaseConfig = {
+          apiKey: "YOUR_API_KEY",
+          authDomain: "YOUR_PROJECT.firebaseapp.com",
+          projectId: "YOUR_PROJECT_ID",
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         let currentStep = 1;
         let userData = { nickname: '', date: null, time: '', mpesaNumber: '', status: 'pending' };
-        let allBookings = JSON.parse(localStorage.getItem('allBookings') || '[]');
-        let bookedDates = new Set(allBookings.filter(b => b.status !== 'cancelled').map(b => b.date));
+        let allBookings = [];
+        let bookedDates = new Set();
         let currentDate = new Date(), selectedDate = null;
-        const ADMIN_PASS = 'tawhiida2026'; // ← CHANGE THIS TO YOUR OWN PASSWORD!
+        const ADMIN_PASS = 'tawhiida2026';
 
-        document.addEventListener('DOMContentLoaded', () => { renderCalendar(); renderAdminList(); });
+        // Real-time listener - this fixes your admin problem
+        db.collection('bookings').orderBy('createdAt','desc').onSnapshot(snapshot => {
+            allBookings = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            bookedDates = new Set(allBookings.filter(b => b.status !== 'cancelled').map(b => b.date));
+            renderCalendar();
+            renderAdminList();
+        });
 
-        // Calendar
         function renderCalendar() {
             const y = currentDate.getFullYear(), m = currentDate.getMonth();
             document.getElementById('monthYear').textContent = new Date(y,m).toLocaleDateString('en-US',{month:'long',year:'numeric'});
@@ -194,7 +198,6 @@
         function prevMonth() { currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
         function nextMonth() { currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); }
 
-        // Steps
         function showStep(n) { for(let i=1;i<=4;i++)document.getElementById(`step${i}`).classList.toggle('hidden',i!==n); currentStep=n; updateIndicators(); }
         function updateIndicators() {
             for(let i=1;i<=4;i++) {
@@ -202,21 +205,27 @@
                 ind.className = i<=currentStep ? 'w-10 h-10 rounded-full bg-pink-600 text-white flex items-center justify-center font-bold' : 'w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold';
             }
         }
+        function goStep1(){ showStep(1); }
         function goStep2() { const n=document.getElementById('nickname').value.trim(); if(!n)return alert('Enter nickname!'); userData.nickname=n; showStep(2); }
         function goStep3() { if(!userData.date)return alert('Pick date!'); const t=document.getElementById('timeSlot').value; if(!t)return alert('Pick time!'); userData.time=t;
             document.getElementById('dispNick').textContent=userData.nickname; document.getElementById('dispDate').textContent=fmtDate(userData.date); document.getElementById('dispTime').textContent=userData.time; showStep(3); }
-        function goStep4() {
+        
+        async function goStep4() {
             const mp=document.getElementById('senderMpesa').value.trim(); if(!mp)return alert('Enter your M-Pesa number!');
-            userData.mpesaNumber=mp; userData.status='pending'; userData.id=Date.now();
-            allBookings.push({...userData});
-            saveBookings(); bookedDates.add(userData.date);
-            document.getElementById('finNick').textContent=userData.nickname;
-            document.getElementById('finDate').textContent=fmtDate(userData.date);
-            document.getElementById('finTime').textContent=userData.time;
-            document.getElementById('finMpesa').textContent=mp;
-            updateStatusDisplay('pending');
-            showStep(4); renderAdminList();
+            userData.mpesaNumber=mp; userData.status='pending';
+            userData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
+            try {
+                await db.collection('bookings').add({...userData});
+                document.getElementById('finNick').textContent=userData.nickname;
+                document.getElementById('finDate').textContent=fmtDate(userData.date);
+                document.getElementById('finTime').textContent=userData.time;
+                document.getElementById('finMpesa').textContent=mp;
+                updateStatusDisplay('pending');
+                showStep(4);
+            } catch(e){ alert('Error saving: '+e.message); }
         }
+
         function startOver() {
             userData={nickname:'',date:null,time:'',mpesaNumber:'',status:'pending'}; selectedDate=null;
             document.getElementById('nickname').value=''; document.getElementById('timeSlot').value=''; document.getElementById('senderMpesa').value='';
@@ -224,24 +233,19 @@
         }
         function fmtDate(ds) { return new Date(ds+'T00:00:00').toLocaleDateString('en-KE',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
 
-        // Admin
         function openAdminLogin() {
             const pass = prompt('Enter Admin Password:');
             if(pass === ADMIN_PASS) { document.getElementById('adminPanel').classList.add('show'); renderAdminList(); }
-            else alert('Wrong password!');
+            else if(pass !== null) alert('Wrong password!');
         }
         function closeAdmin() { document.getElementById('adminPanel').classList.remove('show'); }
-        function saveBookings() { localStorage.setItem('allBookings', JSON.stringify(allBookings)); }
-        function updateStatus(id, newStatus) {
-            const booking = allBookings.find(b => b.id === id);
-            if(booking) {
-                booking.status = newStatus;
-                if(newStatus === 'cancelled') bookedDates.delete(booking.date);
-                else bookedDates.add(booking.date);
-                saveBookings(); renderCalendar(); renderAdminList();
-                alert(`  Booking marked as ${newStatus}!`);
-            }
+
+        async function updateStatus(docId, newStatus) {
+            try {
+                await db.collection('bookings').doc(docId).update({ status: newStatus });
+            } catch(e){ alert('Error: '+e.message); }
         }
+
         function updateStatusDisplay(status) {
             const icon = document.getElementById('statusIcon');
             if(status === 'confirmed') {
@@ -260,6 +264,7 @@
         }
         function renderAdminList() {
             const list = document.getElementById('bookingList');
+            if(!list) return;
             if(allBookings.length === 0) { list.innerHTML = '<p class="text-gray-500">No bookings yet.</p>'; return; }
             list.innerHTML = allBookings.map(b => `
                 <div class="border-b py-3 px-2">
@@ -270,13 +275,15 @@
                             ${b.status==='confirmed'?' Confirmed':' Pending'}
                         </span>
                     </p>
-                    <div class="mt-2 flex gap-2">
-                        <button onclick="updateStatus(${b.id},'confirmed')" class="bg-green-500 text-white px-3 py-1 rounded text-sm"> Confirm Payment</button>
-                        <button onclick="updateStatus(${b.id},'pending')" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm"> Mark Pending</button>
-                        <button onclick="updateStatus(${b.id},'cancelled')" class="bg-red-500 text-white px-3 py-1 rounded text-sm"> Cancel / Free Date</button>
+                    <div class="mt-2 flex gap-2 flex-wrap">
+                        <button onclick="updateStatus('${b.docId}','confirmed')" class="bg-green-500 text-white px-3 py-1 rounded text-sm"> Confirm Payment</button>
+                        <button onclick="updateStatus('${b.docId}','pending')" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm"> Mark Pending</button>
+                        <button onclick="updateStatus('${b.docId}','cancelled')" class="bg-red-500 text-white px-3 py-1 rounded text-sm"> Cancel / Free Date</button>
                     </div>
                 </div>`).join('');
         }
+
+        document.addEventListener('DOMContentLoaded', () => { renderCalendar(); });
     </script>
 </body>
 </html>
