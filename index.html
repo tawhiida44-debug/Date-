@@ -168,14 +168,22 @@
         let currentDate = new Date(), selectedDate = null;
         const ADMIN_PASS = 'tawhiida2026';
 
-        // Real-time listener - this fixes your admin problem
-        db.collection('bookings').orderBy('createdAt','desc').onSnapshot(snapshot => {
-            allBookings = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-            bookedDates = new Set(allBookings.filter(b => b.status !== 'cancelled').map(b => b.date));
-            renderCalendar();
-            renderAdminList();
-        });
-
+        db.collection('bookings').onSnapshot(snapshot => {
+    allBookings = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+    // sort newest first, handle missing createdAt
+    allBookings.sort((a,b) => {
+        const ta = a.createdAt ? a.createdAt.toMillis() : 0;
+        const tb = b.createdAt ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+    });
+    bookedDates = new Set(allBookings.filter(b => b.status !== 'cancelled').map(b => b.date));
+    renderCalendar();
+    renderAdminList();
+}, error => {
+    console.error("Firestore error:", error);
+    document.getElementById('bookingList').innerHTML = '<p class="text-red-500">Error: ' + error.message + '</p>';
+});
+    
         function renderCalendar() {
             const y = currentDate.getFullYear(), m = currentDate.getMonth();
             document.getElementById('monthYear').textContent = new Date(y,m).toLocaleDateString('en-US',{month:'long',year:'numeric'});
