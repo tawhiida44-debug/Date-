@@ -136,7 +136,7 @@
                     <p class="mb-2"><strong>From:</strong> <span id="finMpesa"></span></p>
                     <p><strong>Status:</strong> <span id="finStatus" class="font-bold text-yellow-600"> Pending Confirmation</span></p>
                 </div>
-                <button onclick="startOver()" class="bg-pink-600 text-white py-3 px-8 rounded-xl font-bold">💕 Book Another Date</button>
+                <button onclick="startOver()" class="bg-pink-600 text-white py-3 px-8 rounded-xl font-bold"> Book Another Date</button>
             </div>
         </section>
 
@@ -148,12 +148,15 @@
     </main>
 
     <script>
-        // <-- PASTE YOUR CONFIG HERE
         const firebaseConfig = {
-          apiKey: "YOUR_API_KEY",
-          authDomain: "YOUR_PROJECT.firebaseapp.com",
-          projectId: "YOUR_PROJECT_ID",
-        };
+  apiKey: "AIzaSyAeCMlK0r0pY-iPdDrVRMhaQU2z2H6cIL4",
+  authDomain: "tawhiida-date.firebaseapp.com",
+  projectId: "tawhiida-date",
+  storageBucket: "tawhiida-date.firebasestorage.app",
+  messagingSenderId: "27340550636",
+  appId: "1:27340550636:web:afa35b0893074da0dc10c9",
+  measurementId: "G-KNHE4MGDG6"
+};
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
